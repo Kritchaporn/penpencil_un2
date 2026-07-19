@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teachable Machine Image Model</title>
     
-    <!-- นำเข้า Google Fonts เพื่อความสวยงาม -->
+    <!-- นำเข้า Google Font เพื่อความสวยงาม -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     
     <style>
@@ -110,7 +110,6 @@
             justify-content: space-between;
             align-items: center;
             font-size: 14px;
-            transition: all 0.3s ease;
         }
 
         .class-name {
@@ -132,7 +131,7 @@
 
 <div class="container">
     <h1>Teachable Machine</h1>
-    <div class="subtitle">ระบบวิเคราะห์รูปภาพ (อัปเดตผลทุก 3 วินาที)</div>
+    <div class="subtitle">ระบบวิเคราะห์รูปภาพ (วิเคราะห์ผลทุก 3 วินาที)</div>
     
     <button type="button" class="btn-start" onclick="init()">เปิดใช้งานกล้อง</button>
     
@@ -140,38 +139,39 @@
     <div id="label-container"></div>
 </div>
 
+<!-- นำเข้าไลบรารี TensorFlow และ Teachable Machine -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <script type="text/javascript">
     const URL = "https://teachablemachine.withgoogle.com/models/ddgkRvH8I/";
     let model, webcam, labelContainer, maxPredictions;
-    let predictTimer; 
+    let predictInterval; // ตัวแปรสำหรับผูกเวลา 3 วินาที
 
     async function init() {
-        // ซ่อนปุ่มเริ่มงานเมื่อกดแล้ว
+        // ซ่อนปุ่มเปิดกล้องเมื่อถูกกด เพื่อป้องกันการกดซ้ำซ้อน
         document.querySelector('.btn-start').style.display = 'none';
         
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
 
-        // โหลดโมเดล
+        // โหลดโมเดล AI
         model = await tmImage.load(modelURL, metadataURL);
         maxPredictions = model.getTotalClasses();
 
-        // ตั้งค่ากล้อง
+        // ตั้งค่าตัวกล้อง Webcam
         const flip = true; 
         webcam = new tmImage.Webcam(200, 200, flip); 
         await webcam.setup(); 
         await webcam.play();
         
-        // รันลูปให้ภาพจากกล้องเคลื่อนไหวปกติ
+        // รัน Loop เพื่อให้หน้าจอกล้องขยับลื่นไหลตามปกติ
         window.requestAnimationFrame(loopWebcam);
 
-        // แสดงผลกล้องบนหน้าเว็บ
+        // นำ Element กล้องไปแสดงบนหน้าเว็บ
         document.getElementById("webcam-container").appendChild(webcam.canvas);
         
-        // เตรียมพื้นที่แสดงผลลัพธ์
+        // เตรียมโครงสร้างแสดงผลลัพธ์คลาสต่างๆ
         labelContainer = document.getElementById("label-container");
         labelContainer.innerHTML = ""; 
         for (let i = 0; i < maxPredictions; i++) {
@@ -181,22 +181,22 @@
             labelContainer.appendChild(itemDiv);
         }
 
-        // ทำนายผลครั้งแรกทันที
+        // ทำนายผลครั้งแรกทันทีตอนเปิดกล้อง
         await predict();
 
-        // ตั้งเวลาให้ฟังก์ชันพยากรณ์ทำงานทุกๆ 3 วินาที (3000ms)
-        predictTimer = setInterval(async () => {
+        // ตั้งเวลาให้ AI ทำงานพยากรณ์ภาพทุกๆ 3 วินาที (3000 มิลลิวินาที)
+        predictInterval = setInterval(async () => {
             await predict();
         }, 3000);
     }
 
-    // ทำหน้าที่อัปเดตเฟรมภาพของกล้องให้เคลื่อนไหวลื่นไหล
+    // ฟังก์ชันอัปเดตหน้าจอของกล้องให้แสดงผลเรียลไทม์ (ไม่เกี่ยวกับการทำนาย)
     function loopWebcam() {
         webcam.update(); 
         window.requestAnimationFrame(loopWebcam);
     }
 
-    // ฟังก์ชันส่งภาพไปพยากรณ์ผลลัพธ์
+    // ฟังก์ชันประมวลผลทำนายภาพ
     async function predict() {
         if (!webcam) return;
         
@@ -205,6 +205,7 @@
             const className = prediction[i].className;
             const probability = prediction[i].probability.toFixed(2);
             
+            // อัปเดตข้อความลงใน UI
             const item = labelContainer.childNodes[i];
             item.querySelector('.class-name').innerText = className;
             item.querySelector('.probability').innerText = probability;
